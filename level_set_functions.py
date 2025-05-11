@@ -133,43 +133,60 @@ def compute_length_term(phi, g, epsilon=1.5):
     edge_term : ndarray
         Combined force from edge-based terms that drives the LSF toward object boundaries
     """
-    # Calculate gradient of edge indicator function
-    vy, vx = np.gradient(g)
-    
-    # Calculate gradient of level set function
-    phi_y, phi_x = np.gradient(phi)
-    
-    # Compute magnitude of LSF gradient (used for normalization)
-    gradient_magnitude = np.sqrt(np.square(phi_x) + np.square(phi_y))
-    
-    # Avoid division by zero with small delta
+    [vy, vx] = np.gradient(g)  # Calculate gradient of edge indicator function
+
+    [phi_y, phi_x] = np.gradient(phi)  # Calculate gradient of level set function
+    s = np.sqrt(np.square(phi_x) + np.square(phi_y))  # Gradient magnitude
+
+    # Add a small positive number to avoid division by zero
     delta = 1e-10
-    
-    # Compute normal vectors (unit vectors pointing in gradient direction)
-    n_x = phi_x / (gradient_magnitude + delta)
-    n_y = phi_y / (gradient_magnitude + delta)
-    
-    # Calculate curvature (divergence of normal vectors)
-    curvature = div(n_x, n_y)
-    
-    # Compute Dirac delta approximation of LSF
+    n_x = phi_x / (s + delta)  # Normalized x component of gradient
+    n_y = phi_y / (s + delta)  # Normalized y component of gradient
+
+    curvature = div(n_x, n_y)  # Calculate curvature
+
+    # Calculate Dirac delta of level set function
     dirac_phi = dirac(phi, epsilon)
-    
-    # Compute edge term components:
-    # 1. Advection term: pulls LSF toward edges
-    advection_term = dirac_phi * (vx * n_x + vy * n_y)
-    
-    # 2. Curvature term: smooths the contour
-    curvature_term = dirac_phi * g * curvature
-    
-    # Combine both forces
-    edge_term = advection_term + curvature_term
+
+    # Calculate edge term (combination of advection and curvature terms)
+    edge_term = dirac_phi * (vx * n_x + vy * n_y) + dirac_phi * g * curvature
     
     return edge_term
 
+"""
+def compute_length_term(phi, g, sigma):
+    # Calculate gradient of phi
+    phi_y, phi_x = np.gradient(phi)
+    
+    # Calculate gradient magnitude (add small epsilon to avoid division by zero)
+    grad_norm = np.sqrt(phi_x**2 + phi_y**2 + 1e-10)
+    
+    # Normalize gradient vectors
+    nx = phi_x / grad_norm
+    ny = phi_y / grad_norm
+    
+    # Weight by edge indicator function
+    weighted_nx = g * nx
+    weighted_ny = g * ny
+    
+    # Calculate divergence of weighted normalized gradient
+    div_y, div_x = np.gradient(weighted_nx)
+    div_y2, div_x2 = np.gradient(weighted_ny)
+    div = div_x + div_y2
+    
+    # Multiply by regularized Dirac delta
+    dirac_phi = dirac(phi, sigma)
+    length_term = dirac_phi * div
+    
+    return length_term
+"""
 
-def compute_area_term(phi, g) :
-    area_term = phi * g  # balloon/pressure force
+def compute_area_term(phi, g, epsilon) :
+    # Calculate Dirac delta of level set function
+    dirac_phi = dirac(phi, epsilon)
+
+    area_term = dirac_phi * g  # balloon/pressure force
+
     return area_term
 
 
@@ -185,7 +202,7 @@ def drlse_display(image, phi, g, epsilon, mu, lmda, alfa, i):
 
     length_term = compute_length_term(phi, g, epsilon)
 
-    area_term = compute_area_term(phi, g) 
+    area_term = compute_area_term(phi, g, epsilon) 
 
 
     # Display
@@ -212,19 +229,19 @@ def drlse_display(image, phi, g, epsilon, mu, lmda, alfa, i):
     plt.axis('off')
     
     plt.subplot(2, 3, 4)
-    plt.imshow(mu*reg_term, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.imshow(mu*reg_term, cmap='coolwarm', vmin=-0.2, vmax=0.2)
     plt.colorbar()
     plt.title('mu*regularisation_term')
     plt.axis('off')
 
     plt.subplot(2, 3, 5)
-    plt.imshow(lmda*length_term, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.imshow(lmda*length_term, cmap='coolwarm', vmin=-0.2, vmax=0.2)
     plt.colorbar()
     plt.title('lmda*length_term')
     plt.axis('off')
 
     plt.subplot(2, 3, 6)
-    plt.imshow(alfa*area_term, cmap='coolwarm', vmin=-1, vmax=1)
+    plt.imshow(alfa*area_term, cmap='coolwarm', vmin=-0.2, vmax=0.2)
     plt.colorbar()
     plt.title('alfa*area_term')
     plt.axis('off')
