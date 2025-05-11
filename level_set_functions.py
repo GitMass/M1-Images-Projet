@@ -110,51 +110,7 @@ def dist_reg_p2(phi):
     return div(dps * phi_x - phi_x, dps * phi_y - phi_y) + laplace(phi, mode='nearest')
 
 
-def compute_length_term(phi, g, epsilon=1.5):
-    """
-    Computes the edge-based term for the DRLSE model, combining both length and area terms.
-    
-    This function calculates the force exerted by image edges on the evolving level set function
-    through two components:
-    1. The geodesic length term (weighted by g): dirac_phi * g * curvature
-    2. The advection term: dirac_phi * (vx * n_x + vy * n_y)
-    
-    Parameters:
-    -----------
-    phi : ndarray
-        The level set function (LSF)
-    g : ndarray
-        The edge indicator function with low values at edges and high values in homogeneous regions
-    epsilon : float
-        Width parameter for the Dirac delta function approximation
-        
-    Returns:
-    --------
-    edge_term : ndarray
-        Combined force from edge-based terms that drives the LSF toward object boundaries
-    """
-    [vy, vx] = np.gradient(g)  # Calculate gradient of edge indicator function
-
-    [phi_y, phi_x] = np.gradient(phi)  # Calculate gradient of level set function
-    s = np.sqrt(np.square(phi_x) + np.square(phi_y))  # Gradient magnitude
-
-    # Add a small positive number to avoid division by zero
-    delta = 1e-10
-    n_x = phi_x / (s + delta)  # Normalized x component of gradient
-    n_y = phi_y / (s + delta)  # Normalized y component of gradient
-
-    curvature = div(n_x, n_y)  # Calculate curvature
-
-    # Calculate Dirac delta of level set function
-    dirac_phi = dirac(phi, epsilon)
-
-    # Calculate edge term (combination of advection and curvature terms)
-    edge_term = dirac_phi * (vx * n_x + vy * n_y) + dirac_phi * g * curvature
-    
-    return edge_term
-
-"""
-def compute_length_term(phi, g, sigma):
+def compute_length_term(phi, g, epsilon):
     # Calculate gradient of phi
     phi_y, phi_x = np.gradient(phi)
     
@@ -175,11 +131,11 @@ def compute_length_term(phi, g, sigma):
     div = div_x + div_y2
     
     # Multiply by regularized Dirac delta
-    dirac_phi = dirac(phi, sigma)
+    dirac_phi = dirac(phi, epsilon)
     length_term = dirac_phi * div
     
     return length_term
-"""
+
 
 def compute_area_term(phi, g, epsilon) :
     # Calculate Dirac delta of level set function
@@ -223,7 +179,7 @@ def drlse_display(image, phi, g, epsilon, mu, lmda, alfa, i):
 
     plt.subplot(2, 3, 3)
     phi_x, phi_y, grad_phi_mag = compute_phi_gradient(phi)
-    plt.imshow(grad_phi_mag, cmap='coolwarm', vmin=0, vmax=2)
+    plt.imshow(grad_phi_mag, cmap='Blues', vmin=0, vmax=2)
     plt.colorbar()
     plt.title('grad_phi_mag')
     plt.axis('off')
